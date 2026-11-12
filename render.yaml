@@ -35,5 +35,9 @@ services:
         sync: false
       - key: PAYPAL_INVOICER_EMAIL
         sync: false
-      - key: OPENAI_MODEL
-        value: gpt-4.1-mini
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_MODEL
+        value: gemini-flash-latest
+      - key: GEMINI_API_KEY
+        sync: false
