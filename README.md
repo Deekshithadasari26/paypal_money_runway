@@ -4,7 +4,14 @@ A working local PayPal AI hackathon demo: React + Vite frontend, Express backend
 
 ## Install, seed, run, test
 
-Requires **Node.js 24 LTS** (uses built-in `node:sqlite`) and npm. Run in this folder:
+Requires **Node.js 24 LTS** (uses built-in `node:sqlite`) and npm. Clone the repository first:
+
+```sh
+git clone https://github.com/Deekshithadasari26/paypal_money_runway.git
+cd paypal_money_runway
+```
+
+For a fresh clone, run:
 
 ```sh
 npm ci
@@ -13,7 +20,7 @@ npm run seed
 npm run dev
 ```
 
-Open http://127.0.0.1:5173. Vite proxies `/api` to Express at port 3001. The seed is idempotent and preserves existing changes. Database: `data/money-runway.sqlite`, with SQLite WAL sidecars. `.env` and database files are ignored by Git. Never put secrets in `VITE_*` variables.
+Open http://127.0.0.1:5173. If you already have a `.env`, preserve it instead of overwriting it with the template. Vite proxies `/api` to Express at port 3001. The seed is idempotent and preserves existing changes. Database: `data/money-runway.sqlite`, with SQLite WAL sidecars. `.env` and database files are ignored by Git. Never put secrets in `VITE_*` variables.
 
 ```sh
 npm test
@@ -39,7 +46,16 @@ DATABASE_PATH=./data/november-demo.sqlite node --input-type=module -e "import {o
 
 Set `.env` to that database path, restart, and choose **2026-11-10** in the demo date control. Demo dates must be on/after the opening date and within 700 days of it. The default planner uses the day after seeding as the monthly payday; for the canonical scenario it is day 11. Actual live time and PayPal sync timestamps always use the real clock, independently of the demo date.
 
+## Navigation
+
+- **Daily Money** contains **Today** and **PayPal activity**.
+- **Plan & Insights** contains **Payday planner**, **Forecast & AI** and **Calendar**.
+
+Use **View seeded demo** to select the opening/demo date without changing transactions. An empty later date correctly shows the full unused allowance. The displayed numbers come from SQLite and the selected date, not fixed UI values.
+
 ## Judge walkthrough (milestones in order)
+
+The figures below assume a fresh canonical November 10 database. Check the planner and forecast before adding expenses, importing CSV rows, recording salary or confirming payments. Those actions change saved data and the forecast; use a separate database for repeatable demonstrations.
 
 1. **Today**: ₹800 allowance; ₹250 lunch, ₹150 office travel and ₹100 coffee; **₹300 left**. Add a ₹350 everyday expense: **₹50 overspent**, visibly labeled. Edit it to ₹200: **₹100 left**. Refresh to confirm persistence. Fun expenses change the separate Fun total. End-of-day recap saves a snapshot in the app, with previous recaps displayed below. Press it again to update that day's snapshot.
 2. Import `samples/inr-bank-upi.csv` through **Import sample INR CSV**. Its dates are deliberately fixed at 2026-11-10 and each row is labeled **Sample INR CSV**. Choose that demo date to see them; for another opening date, edit a copy of the CSV first. Reimporting identical rows skips them. CSV columns: `id,date,description,amount,currency,bucket`; amount is positive decimal rupees, currency must be INR, bucket is everyday/fun/bills/subscriptions/sip/debt. Quoted CSV fields are supported; malformed files import no rows. Maximum 1000 rows, 256 KB request. Exported bank files with different columns need mapping to this sample format.
@@ -77,14 +93,29 @@ Restart the backend after changing `.env`. Do not copy your Postman access token
 
 Sandbox invoice draft creation additionally needs your Sandbox business email. Review stores an immutable payload and durable request ID. Identical review submissions return the same action. Creation requires `{approved:true}` and atomically claims the action before calling PayPal. A successful retry returns the stored invoice ID. Concurrent attempts cannot issue another creation. An ambiguous timeout/crash blocks automatic retry; inspect your Sandbox invoicing dashboard and use the stored request ID to reconcile before making another invoice. This favors avoiding duplicates over silently retrying an uncertain financial action. Invoice email edits require a new review. No invoice send endpoint exists.
 
-## Optional AI
+## AI setup: Gemini
+
+The demo's active AI integration is Gemini. Save your own key in the backend `.env`:
 
 ```dotenv
-OPENAI_API_KEY=YOUR_AI_API_KEY
+AI_PROVIDER=gemini
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+GEMINI_MODEL=gemini-flash-latest
+```
+
+Restart the backend after saving. Run `npm run verify:live` to exercise actual app HTTP routes. A successful real AI request reports `status: verified` and `mode: model`; fallback is never reported as a successful model test. Free-tier access and limits depend on your Google project and model. HTTP errors and timeouts are shown as fallback status, while the budget continues working. Use demo data for free-tier demonstrations.
+
+Gemini uses the generateContent API with JSON Schema output and a 60-second timeout. Only an allowlist of generic spending words survives description redaction; raw merchant/person/account identifiers, emails, phones, transaction IDs and PayPal descriptions are not sent. The UI exposes the exact facts shared. The backend computes cash, projections, deltas since the last generated insight, salary variance and allocation overruns. The model supplies wording, category suggestions and one subscription review draft; it never computes or changes the budget. Zod validates length, keys, category enums, transaction references and subscription reference. Schema validation does not guarantee factual accuracy of prose: users review AI wording and backend figures remain authoritative. Draft edits remain in SQLite and are never sent to a subscription provider.
+
+OpenAI remains an optional backend provider. To use it instead, set:
+
+```dotenv
+AI_PROVIDER=openai
+OPENAI_API_KEY=YOUR_OPENAI_API_KEY
 OPENAI_MODEL=gpt-4.1-mini
 ```
 
-Backend-only OpenAI Responses API, `store:false`, strict JSON schema, 25-second timeout. Only an allowlist of generic spending words survives description redaction; raw merchant/person/account identifiers, emails, phones, transaction IDs and PayPal descriptions are not sent. The UI exposes the exact facts shared. The backend computes cash, projections, deltas since the last generated insight, salary variance and allocation overruns. The model supplies wording, category suggestions, and one subscription review draft; it never computes or changes the budget. Zod validates length, keys, category enums, transaction references and subscription reference. Schema validation cannot establish factual accuracy of prose: all AI suggestions are labeled for review and backend figures remain authoritative. Missing keys, HTTP failure, timeout, refusal, incomplete response or invalid schema use deterministic guidance. Draft edits remain in SQLite.
+That integration uses the Responses API, `store:false`, strict JSON Schema and a 25-second timeout. Both providers use the same redacted facts, local validation and deterministic fallback. Never put either key in frontend code, Git, screenshots or submission text.
 
 ## Tests and verification
 
@@ -98,7 +129,7 @@ Checks cover:
 - Exactly 30 forecast days, deterministic outcomes, delayed-income shortfall, buffer preservation, redaction, model outage/invalid-response fallback, valid structured model response.
 - Optional invoice explicit approval, stable review IDs, concurrent/repeat creation protection and uncertain-outcome blocking.
 
-See `VERIFICATION.md` for the final run report. Private credentials are required to verify real OAuth/Transaction Search permissions, real Sandbox data and invoicing eligibility, and real model access. Mocked successes do not establish those account-specific capabilities.
+Latest session verification: **19 automated tests and the production build passed**. A live run on November 12, 2026 reported PayPal verified with zero repeat imports, and Gemini verified with `mode: model`. These are observations from the development account, not guarantees for another account. See `VERIFICATION.md` for earlier verification details. Private credentials are required to verify real OAuth/Transaction Search permissions, real Sandbox data and invoicing eligibility, and real model access. Mocked successes do not establish those account-specific capabilities.
 
 ## Layout
 
@@ -113,7 +144,7 @@ See `VERIFICATION.md` for the final run report. Private credentials are required
 
 ## API references
 
-Implementation follows [PayPal Transaction Search](https://developer.paypal.com/api/transaction-search/v1), [PayPal Invoicing v2](https://developer.paypal.com/api/invoicing/v2/), [PayPal request idempotency](https://developer.paypal.com/api/rest/reference/idempotency/) and [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses).
+Implementation follows [PayPal Transaction Search](https://developer.paypal.com/api/transaction-search/v1), [PayPal Invoicing v2](https://developer.paypal.com/api/invoicing/v2/), [PayPal request idempotency](https://developer.paypal.com/api/rest/reference/idempotency/), [Gemini generateContent](https://ai.google.dev/api/generate-content) and [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses).
 
 MIT licensed; see `LICENSE`.
 
@@ -127,18 +158,6 @@ The wallet is actual recorded INR cash. The everyday plan before salary is the r
 
 A secret-free [Postman collection](postman/Money-Runway.postman_collection.json) and [local environment template](postman/Local.postman_environment.json) are included. Default runs are read-only. `npm run test:postman` runs fixture/mutation checks against a temporary isolated database with no private credentials. Optional live folders require explicit opt-in. See [Postman instructions](postman/README.md).
 
-Render deployment is prepared in `render.yaml`: one Node service, persistent SQLite disk, HTTPS-compatible origin validation, a health endpoint and password-protected judge access. **It is not deployed yet.** A source repository and review/approval of Render's paid service/disk plan are still required. See [Render deployment guide](docs/RENDER.md). Production no longer uses the local no-auth/loopback configuration.
+Render deployment is prepared in `render.yaml`: one Node service, persistent SQLite disk, HTTPS-compatible origin validation, a health endpoint and password-protected judge access. **It is not deployed yet.** The source repository is public; review/approval of Render's paid service/disk plan is still required. See [Render deployment guide](docs/RENDER.md). Production no longer uses the local no-auth/loopback configuration.
 
 Actual backend verification can be repeated with `npm run verify:live`. It imports PayPal Sandbox activity and repeats the same search window, reporting counts/status only. A configured AI key enables one actual insight request; missing AI credentials are reported as unconfigured, never as a successful model test. This script never creates an invoice or makes a payment.
-
-### Gemini alternative
-
-To use Gemini instead of OpenAI, save these values in the backend `.env` (never in React or Git):
-
-```dotenv
-AI_PROVIDER=gemini
-GEMINI_API_KEY=YOUR_GEMINI_API_KEY
-GEMINI_MODEL=gemini-flash-latest
-```
-
-Restart the backend and run `npm run verify:live`. AI is verified only when the result reports `status: verified` and `mode: model`. Free-tier availability and quota depend on your Google project/model. Gemini receives only the same redacted descriptions and backend-computed facts as the OpenAI integration; use demo data with the free tier. Structured output is validated locally, and quota failures or invalid responses fall back to deterministic guidance. Set `AI_PROVIDER=openai` to use the existing OpenAI integration instead.
