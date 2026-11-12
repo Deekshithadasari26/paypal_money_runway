@@ -23,6 +23,9 @@ export function createRuntime(db, { env = process.env, fetcher = fetch } = {}) {
       paypalLastSync: getSetting(db, "paypalSync", null),
     }),
   );
+  app.get("/api/hosting", (req, res) =>
+    res.json({ temporary: env.TEMPORARY_DEMO === "true" }),
+  );
   errors(app);
   app.use("/api", (req, res) =>
     res.status(404).json({ error: "API route not found" }),

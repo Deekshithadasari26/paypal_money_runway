@@ -161,3 +161,9 @@ A secret-free [Postman collection](postman/Money-Runway.postman_collection.json)
 Render deployment is prepared in `render.yaml`: one Node service, persistent SQLite disk, HTTPS-compatible origin validation, a health endpoint and password-protected judge access. **It is not deployed yet.** The source repository is public; review/approval of Render's paid service/disk plan is still required. See [Render deployment guide](docs/RENDER.md). Production no longer uses the local no-auth/loopback configuration.
 
 Actual backend verification can be repeated with `npm run verify:live`. It imports PayPal Sandbox activity and repeats the same search window, reporting counts/status only. A configured AI key enables one actual insight request; missing AI credentials are reported as unconfigured, never as a successful model test. This script never creates an invoice or makes a payment.
+
+## Free hosted judge demo
+
+The default `render.yaml` now uses Render's **Free** web-service plan with no persistent disk. Deploy from GitHub as a Blueprint. Supply your own Sandbox and Gemini secrets in Render, keep the generated judge password, and wait for the service to become Live. Share its HTTPS URL and judge login in private testing instructions.
+
+This is a **temporary demo**: SQLite records are lost on service sleep, restart or redeploy, then the November 10 seed is recreated. A notice in the app explains the limit. The local app still persists SQLite normally. The saved `render-persistent.yaml` is the paid persistent-disk configuration; it is not the default. See https://render.com/docs/free for free-tier limits and cold-start behavior. No public hosted URL has been verified yet.

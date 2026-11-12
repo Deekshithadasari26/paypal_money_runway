@@ -12,11 +12,15 @@ function App() {
     [p, setP] = useState(null),
     [d, setD] = useState(null),
     [notice, setNotice] = useState(""),
-    [editing, setEditing] = useState(null);
+    [editing, setEditing] = useState(null),
+    [temporary, setTemporary] = useState(false);
   const load = () =>
     Promise.all([api("/today").then(setD), api("/plan").then(setP)]);
   useEffect(() => {
     load().catch((e) => setNotice(e.message));
+    api("/hosting")
+      .then((v) => setTemporary(v.temporary))
+      .catch(() => {});
   }, []);
   async function run(fn) {
     try {
@@ -70,6 +74,14 @@ function App() {
         </div>
       </aside>
       <main>
+        {temporary && (
+          <div className="notice" role="note">
+            Temporary hosted demo · changes are saved during this running
+            session, but reset when the free service sleeps, restarts or
+            redeploys. Please use demo data only. The local version supports
+            persistent SQLite storage.
+          </div>
+        )}
         <header>
           <span>YOUR MONEY, WITH A LITTLE MORE CLARITY</span>
           <span className="badge">DEMO WORKSPACE</span>

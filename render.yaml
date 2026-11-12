@@ -1,19 +1,15 @@
-# Review the paid service/disk cost in Render before creating resources.
-# SQLite needs a persistent disk; a free ephemeral filesystem is not sufficient.
+# Free temporary judge demo. SQLite data resets on restart/redeploy/spin-down.
+# Use render-persistent.yaml for paid durable SQLite storage.
 services:
   - type: web
-    name: money-runway
+    name: money-runway-demo
     runtime: node
-    plan: 0.5c-512mb
+    plan: free
     numInstances: 1
     autoDeployTrigger: off
     buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
-    disk:
-      name: money-runway-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
@@ -22,7 +18,9 @@ services:
       - key: HOST
         value: 0.0.0.0
       - key: DATABASE_PATH
-        value: /var/data/money-runway.sqlite
+        value: ./data/money-runway.sqlite
+      - key: TEMPORARY_DEMO
+        value: "true"
       - key: DEMO_SEED_DATE
         value: "2026-11-10"
       - key: DEMO_USERNAME
