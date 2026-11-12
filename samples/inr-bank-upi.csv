@@ -1,0 +1,3 @@
+id,date,description,amount,currency,bucket
+sample-01,2026-11-10,UPI groceries,120.00,INR,everyday
+sample-02,2026-11-10,Weekend cinema,450.00,INR,fun
