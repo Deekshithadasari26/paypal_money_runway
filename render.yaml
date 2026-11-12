@@ -23,10 +23,8 @@ services:
         value: "true"
       - key: DEMO_SEED_DATE
         value: "2026-11-10"
-      - key: DEMO_USERNAME
-        value: judge
-      - key: DEMO_PASSWORD
-        generateValue: true
+      - key: PUBLIC_DEMO
+        value: "true"
       - key: PAYPAL_CLIENT_ID
         sync: false
       - key: PAYPAL_CLIENT_SECRET

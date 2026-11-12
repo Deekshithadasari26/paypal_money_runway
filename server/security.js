@@ -8,8 +8,11 @@ import express from "express";
 const digest = (value) => createHash("sha256").update(String(value)).digest();
 export function configureAccess(app, db, env = process.env) {
   const production = env.NODE_ENV === "production";
+  const publicDemo =
+    env.TEMPORARY_DEMO === "true" && env.PUBLIC_DEMO !== "false";
   if (
     production &&
+    !publicDemo &&
     (!env.DEMO_PASSWORD ||
       env.DEMO_PASSWORD.length < 16 ||
       /YOUR_|placeholder/i.test(env.DEMO_PASSWORD))
@@ -33,7 +36,7 @@ export function configureAccess(app, db, env = process.env) {
     db.prepare("SELECT 1").get();
     res.json({ status: "ok", app: "Money Runway" });
   });
-  if (env.DEMO_PASSWORD) {
+  if (env.DEMO_PASSWORD && !publicDemo) {
     const same = (a, b) => timingSafeEqual(digest(a), digest(b));
     const sign = (value) =>
       createHmac("sha256", env.DEMO_PASSWORD).update(value).digest("base64url");
