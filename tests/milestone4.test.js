@@ -124,3 +124,57 @@ test("M4: savings projection changes have backend-computed component deltas", as
   assert.match(result.result.explanation, /recorded outflows increased/);
   db.close();
 });
+
+test("Gemini validates structured output and fails safely on quota or unknown references", async () => {
+  const db = setup();
+  const env = { AI_PROVIDER: "gemini", GEMINI_API_KEY: "test-gemini" };
+  const value = {
+    explanation: "Expected income timing affects the projection.",
+    categories: [{ ref: "t1", category: "everyday", reason: "Food" }],
+    subscription: null,
+  };
+  let request;
+  const result = await insights(db, {
+    env,
+    fetcher: async (url, opts) => {
+      request = JSON.parse(opts.body);
+      assert.match(url, /generativelanguage.googleapis.com/);
+      assert.equal(opts.headers["x-goog-api-key"], "test-gemini");
+      return Response.json({
+        candidates: [
+          {
+            finishReason: "STOP",
+            content: { parts: [{ text: JSON.stringify(value) }] },
+          },
+        ],
+      });
+    },
+  });
+  assert.equal(result.mode, "model");
+  assert.equal(request.generationConfig.responseJsonSchema.type, "object");
+  assert.doesNotMatch(
+    JSON.stringify(request),
+    /test-gemini|Lunch at the office|Stream Plus/,
+  );
+  const quota = await insights(db, {
+    env,
+    fetcher: async () => Response.json({}, { status: 429 }),
+  });
+  assert.equal(quota.mode, "fallback");
+  assert.match(quota.status, /quota or rate limit/);
+  value.categories[0].ref = "unknown";
+  const invalid = await insights(db, {
+    env,
+    fetcher: async () =>
+      Response.json({
+        candidates: [
+          {
+            finishReason: "STOP",
+            content: { parts: [{ text: JSON.stringify(value) }] },
+          },
+        ],
+      }),
+  });
+  assert.equal(invalid.mode, "fallback");
+  db.close();
+});

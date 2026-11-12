@@ -43,22 +43,25 @@ function App() {
             Money Runway<b>MAKE ROOM FOR TOMORROW</b>
           </span>
         </a>
-        <nav>
-          {[
-            "Today",
-            "Payday planner",
-            "PayPal activity",
-            "Forecast & AI",
-            "Calendar",
-          ].map((name, i) => (
-            <button
-              key={name}
-              className={page === name ? "active" : ""}
-              onClick={() => setPage(name)}
-            >
-              {["◷", "▤", "⇄", "↗", "▦"][i]} {name}
-            </button>
-          ))}
+        <nav aria-label="Main navigation">
+          <button
+            className={
+              ["Today", "PayPal activity"].includes(page) ? "active" : ""
+            }
+            onClick={() => setPage("Today")}
+          >
+            ◷ Daily Money
+          </button>
+          <button
+            className={
+              ["Payday planner", "Forecast & AI", "Calendar"].includes(page)
+                ? "active"
+                : ""
+            }
+            onClick={() => setPage("Payday planner")}
+          >
+            ↗ Plan & Insights
+          </button>
         </nav>
         <div className="sidebar-bottom">
           ● Demo profile
@@ -97,6 +100,31 @@ function App() {
             />
           </label>
         </div>
+        <div className="workspace-tools">
+          <div className="view-tabs" role="group" aria-label="Workspace views">
+            {(["Today", "PayPal activity"].includes(page)
+              ? ["Today", "PayPal activity"]
+              : ["Payday planner", "Forecast & AI", "Calendar"]
+            ).map((name) => (
+              <button
+                key={name}
+                className={page === name ? "active" : "secondary"}
+                aria-pressed={page === name}
+                onClick={() => setPage(name)}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+          <button
+            className="secondary"
+            onClick={() =>
+              run(() => api("/demo-date", { date: p.plan.baseDate }, "PUT"))
+            }
+          >
+            View seeded demo · {p.plan.baseDate}
+          </button>
+        </div>
         {notice && (
           <div role="status" className="notice" onClick={() => setNotice("")}>
             {notice} <small>× dismiss</small>
@@ -134,6 +162,13 @@ function App() {
                   Today’s activity{" "}
                   <small>{d.transactions.length} transactions</small>
                 </h3>
+                {d.transactions.length === 0 && (
+                  <p className="muted">
+                    No expenses recorded for {d.date}. Choose the seeded demo
+                    date above to view the original three expenses, or add an
+                    expense for this day.
+                  </p>
+                )}
                 {d.transactions.map((t) => (
                   <div className="transaction" key={t.id}>
                     <span className="icon">

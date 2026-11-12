@@ -130,3 +130,15 @@ A secret-free [Postman collection](postman/Money-Runway.postman_collection.json)
 Render deployment is prepared in `render.yaml`: one Node service, persistent SQLite disk, HTTPS-compatible origin validation, a health endpoint and password-protected judge access. **It is not deployed yet.** A source repository and review/approval of Render's paid service/disk plan are still required. See [Render deployment guide](docs/RENDER.md). Production no longer uses the local no-auth/loopback configuration.
 
 Actual backend verification can be repeated with `npm run verify:live`. It imports PayPal Sandbox activity and repeats the same search window, reporting counts/status only. A configured AI key enables one actual insight request; missing AI credentials are reported as unconfigured, never as a successful model test. This script never creates an invoice or makes a payment.
+
+### Gemini alternative
+
+To use Gemini instead of OpenAI, save these values in the backend `.env` (never in React or Git):
+
+```dotenv
+AI_PROVIDER=gemini
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+GEMINI_MODEL=gemini-flash-latest
+```
+
+Restart the backend and run `npm run verify:live`. AI is verified only when the result reports `status: verified` and `mode: model`. Free-tier availability and quota depend on your Google project/model. Gemini receives only the same redacted descriptions and backend-computed facts as the OpenAI integration; use demo data with the free tier. Structured output is validated locally, and quota failures or invalid responses fall back to deterministic guidance. Set `AI_PROVIDER=openai` to use the existing OpenAI integration instead.

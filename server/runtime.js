@@ -5,7 +5,7 @@ import { createApp, errors } from "./app.js";
 import { getSetting } from "./db.js";
 import { plannerRoutes } from "./planner.js";
 import { paypalRoutes, configured } from "./paypal.js";
-import { forecastRoutes } from "./forecast.js";
+import { forecastRoutes, aiConfiguration } from "./forecast.js";
 import { calendarRoutes } from "./calendar.js";
 import { invoiceRoutes } from "./invoice.js";
 const root = fileURLToPath(new URL("../", import.meta.url));
@@ -19,8 +19,7 @@ export function createRuntime(db, { env = process.env, fetcher = fetch } = {}) {
   app.get("/api/integrations/status", (req, res) =>
     res.json({
       paypalConfigured: configured(env),
-      aiConfigured:
-        !!env.OPENAI_API_KEY && !/YOUR_|placeholder/i.test(env.OPENAI_API_KEY),
+      aiConfigured: aiConfiguration(env).configured,
       paypalLastSync: getSetting(db, "paypalSync", null),
     }),
   );
